@@ -155,8 +155,8 @@
 
                 if (isNaN(resistividad) || isNaN(porosidadNeutron)) continue;
 
-                // Filtrar valores anómalos de porosidad neutrón
-                if (porosidadNeutron >= -0.5 && porosidadNeutron <= 0.5) {
+                // Filtrar valores anómalos de porosidad neutrón (solo positivos y mayores que cero)
+                if (porosidadNeutron > 0 && porosidadNeutron <= 0.5) {
                     datos.push({
                         porosidad: porosidadNeutron,
                         resistividad: resistividad
@@ -191,9 +191,8 @@
             // Generar línea de tendencia usando Rw, m, y n
             const xLinea = [];
             const yLinea = [];
-            for (let phi = -0.5; phi <= 0.5; phi += 0.01) {
-                if (phi === 0) continue; // Evitar división por cero
-                const rt = rw / Math.pow(Math.abs(phi), m);
+            for (let phi = 0.01; phi <= 0.5; phi += 0.005) {
+                const rt = rw / Math.pow(phi, m);
                 xLinea.push(phi);
                 yLinea.push(rt);
             }
@@ -210,7 +209,7 @@
             const layout = {
                 xaxis: {
                     title: 'Porosidad Neutrón (φn)',
-                    // type: 'log',
+                    type: 'log',
                     autorange: true
                 },
                 yaxis: {
