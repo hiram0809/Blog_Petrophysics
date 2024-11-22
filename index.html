@@ -121,24 +121,24 @@
 
             // Identificar columnas de interés basadas en los mnemonics
             let indiceResistividad = -1;
-            let indiceDensidad = -1;
+            let indicePorosidadNeutron = -1;
 
-            // Mnemonics comunes para resistividad y densidad
+            // Mnemonics comunes para resistividad y porosidad neutrón
             const mnemonicsResistividad = ['RT', 'RES', 'ILD', 'LLD'];
-            const mnemonicsDensidad = ['RHOB', 'DEN', 'DENS'];
+            const mnemonicsPorosidadNeutron = ['NPHI', 'CNL', 'NPOR'];
 
             // Encontrar índices de las columnas
             encabezados.forEach((columna, indice) => {
                 if (mnemonicsResistividad.includes(columna.trim().toUpperCase())) {
                     indiceResistividad = indice;
                 }
-                if (mnemonicsDensidad.includes(columna.trim().toUpperCase())) {
-                    indiceDensidad = indice;
+                if (mnemonicsPorosidadNeutron.includes(columna.trim().toUpperCase())) {
+                    indicePorosidadNeutron = indice;
                 }
             });
 
-            if (indiceResistividad === -1 || indiceDensidad === -1) {
-                alert('No se encontraron las columnas de resistividad y/o densidad en el archivo.');
+            if (indiceResistividad === -1 || indicePorosidadNeutron === -1) {
+                alert('No se encontraron las columnas de resistividad y/o porosidad neutrón en el archivo.');
                 return;
             }
 
@@ -151,31 +151,18 @@
                 const valores = linea.split(',');
 
                 const resistividad = parseFloat(valores[indiceResistividad]);
-                const densidad = parseFloat(valores[indiceDensidad]);
+                const porosidadNeutron = parseFloat(valores[indicePorosidadNeutron]);
 
-                if (isNaN(resistividad) || isNaN(densidad)) continue;
+                if (isNaN(resistividad) || isNaN(porosidadNeutron)) continue;
 
-                // Calcular porosidad a partir de la densidad
-                const porosidad = calcularPorosidadDensidad(densidad);
-
-                // Filtrar valores anómalos de porosidad
-                if (porosidad >= 0 && porosidad <= 1) {
+                // Filtrar valores anómalos de porosidad neutrón
+                if (porosidadNeutron >= -0.5 && porosidadNeutron <= 0.5) {
                     datos.push({
-                        porosidad: porosidad,
+                        porosidad: porosidadNeutron,
                         resistividad: resistividad
                     });
                 }
             }
-        }
-
-        function calcularPorosidadDensidad(densidadMedida) {
-            // Parámetros para arcilla y fluido agua
-            const densidadMatriz = 2.65; // g/cm³ (típica para arcilla)
-            const densidadFluido = 1.0; // g/cm³ (agua)
-
-            const porosidad = (densidadMatriz - densidadMedida) / (densidadMatriz - densidadFluido);
-
-            return porosidad;
         }
 
         function actualizarGrafico() {
@@ -204,8 +191,9 @@
             // Generar línea de tendencia usando Rw, m, y n
             const xLinea = [];
             const yLinea = [];
-            for (let phi = 0.01; phi <= 0.5; phi += 0.005) {
-                const rt = rw / Math.pow(phi, m);
+            for (let phi = -0.5; phi <= 0.5; phi += 0.01) {
+                if (phi === 0) continue; // Evitar división por cero
+                const rt = rw / Math.pow(Math.abs(phi), m);
                 xLinea.push(phi);
                 yLinea.push(rt);
             }
@@ -221,8 +209,8 @@
 
             const layout = {
                 xaxis: {
-                    title: 'Porosidad (φ)',
-                    type: 'log',
+                    title: 'Porosidad Neutrón (φn)',
+                    // type: 'log',
                     autorange: true
                 },
                 yaxis: {
