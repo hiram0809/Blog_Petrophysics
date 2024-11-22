@@ -155,8 +155,8 @@
 
                 if (isNaN(resistividad) || isNaN(porosidadNeutron)) continue;
 
-                // Filtrar valores anómalos de porosidad neutrón (solo positivos y mayores que cero)
-                if (porosidadNeutron > 0 && porosidadNeutron <= 0.5) {
+                // Filtrar valores de porosidad neutrón entre 0.01 y 0.5
+                if (porosidadNeutron >= 0.01 && porosidadNeutron <= 0.5) {
                     datos.push({
                         porosidad: porosidadNeutron,
                         resistividad: resistividad
@@ -179,18 +179,6 @@
             const x = datos.map(d => d.porosidad);
             const y = datos.map(d => d.resistividad);
 
-            // Determinar los límites de los ejes basados en los datos
-            const xMinData = Math.min(...x);
-            const xMaxData = Math.max(...x);
-            const yMinData = Math.min(...y);
-            const yMaxData = Math.max(...y);
-
-            // Definir los límites de los ejes con un margen
-            const xMin = Math.pow(10, Math.floor(Math.log10(xMinData)) - 1);
-            const xMax = Math.pow(10, Math.ceil(Math.log10(xMaxData)) + 1);
-            const yMin = Math.pow(10, Math.floor(Math.log10(yMinData)) - 1);
-            const yMax = Math.pow(10, Math.ceil(Math.log10(yMaxData)) + 1);
-
             const traceDatos = {
                 x: x,
                 y: y,
@@ -204,16 +192,22 @@
             const xLinea = [];
             const yLinea = [];
 
-            // Generar phi desde xMin hasta xMax en escala logarítmica
+            // Definir límites fijos para phi y Rt
+            const phiInicio = 0.01;
+            const phiFin = 0.5;
+            const rtMin = 0.1;
+            const rtMax = 10000;
+
+            // Generar phi desde phiInicio hasta phiFin en escala logarítmica
             const numPuntos = 100;
-            const phiInicio = xMin;
-            const phiFin = xMax;
 
             for (let i = 0; i <= numPuntos; i++) {
                 const phi = phiInicio * Math.pow(phiFin / phiInicio, i / numPuntos);
                 const rt = rw / Math.pow(phi, m);
-                xLinea.push(phi);
-                yLinea.push(rt);
+                if (rt >= rtMin && rt <= rtMax) {
+                    xLinea.push(phi);
+                    yLinea.push(rt);
+                }
             }
 
             const traceLinea = {
@@ -230,13 +224,17 @@
                     title: 'Porosidad Neutrón (φn)',
                     type: 'log',
                     autorange: false,
-                    range: [Math.log10(xMin), Math.log10(xMax)]
+                    range: [Math.log10(phiInicio), Math.log10(phiFin)],
+                    dtick: 0.1,
+                    tickvals: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5],
+                    ticktext: ['0.01', '0.02', '0.05', '0.1', '0.2', '0.5']
                 },
                 yaxis: {
                     title: 'Resistividad (Rt)',
                     type: 'log',
                     autorange: false,
-                    range: [Math.log10(yMin), Math.log10(yMax)]
+                    range: [Math.log10(rtMin), Math.log10(rtMax)],
+                    dtick: 1
                 },
                 title: 'Gráfico de Pickett',
                 showlegend: true
