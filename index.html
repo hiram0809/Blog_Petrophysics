@@ -17,6 +17,16 @@
         #controles {
             margin-bottom: 20px;
         }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        label {
+            width: 150px;
+            display: inline-block;
+        }
+        input[type="number"] {
+            width: 100px;
+        }
     </style>
 </head>
 <body>
@@ -24,11 +34,25 @@
     <h1>Gráfico de Pickett Interactivo</h1>
 
     <div id="controles">
-        <label for="archivo">Cargar archivo de datos (CSV): </label>
-        <input type="file" id="archivo" accept=".csv"><br><br>
+        <div class="input-group">
+            <label for="archivo">Cargar archivo CSV: </label>
+            <input type="file" id="archivo" accept=".csv">
+        </div>
 
-        <label for="rw">Valor de Rw: </label>
-        <input type="number" id="rw" name="rw" step="any" value="0.1"><br><br>
+        <div class="input-group">
+            <label for="rw">Valor de Rw: </label>
+            <input type="number" id="rw" name="rw" step="any" value="0.1">
+        </div>
+
+        <div class="input-group">
+            <label for="m">Valor de m (Cementación): </label>
+            <input type="number" id="m" name="m" step="any" value="2">
+        </div>
+
+        <div class="input-group">
+            <label for="n">Valor de n (Saturación): </label>
+            <input type="number" id="n" name="n" step="any" value="2">
+        </div>
     </div>
 
     <div id="grafico"></div>
@@ -36,6 +60,7 @@
     <script>
         let datos = [];
 
+        // Event listeners
         document.getElementById('archivo').addEventListener('change', function(e) {
             const archivo = e.target.files[0];
             if (!archivo) {
@@ -50,19 +75,71 @@
             lector.readAsText(archivo);
         });
 
-        document.getElementById('rw').addEventListener('input', function() {
-            actualizarGrafico();
+        const inputs = ['rw', 'm', 'n'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                actualizarGrafico();
+            });
         });
 
         function procesarDatos(csv) {
             const lineas = csv.split('\n');
-            datos = lineas.map(linea => {
-                const [porosidad, resistencia] = linea.trim().split(',').map(Number);
-                return {
+            const encabezados = lineas[0].trim().split(',');
+
+            // Identificar columnas de interés basadas en los mnemonics
+            let indiceResistividad = -1;
+            let indiceDensidad = -1;
+
+            // Mnemonics comunes para resistividad y densidad
+            const mnemonicsResistividad = ['RT', 'RES', 'ILD', 'LLD'];
+            const mnemonicsDensidad = ['RHOB', 'DEN', 'DENS'];
+
+            // Encontrar índices de las columnas
+            encabezados.forEach((columna, indice) => {
+                if (mnemonicsResistividad.includes(columna.trim().toUpperCase())) {
+                    indiceResistividad = indice;
+                }
+                if (mnemonicsDensidad.includes(columna.trim().toUpperCase())) {
+                    indiceDensidad = indice;
+                }
+            });
+
+            if (indiceResistividad === -1 || indiceDensidad === -1) {
+                alert('No se encontraron las columnas de resistividad y/o densidad en el archivo.');
+                return;
+            }
+
+            datos = [];
+
+            for (let i = 1; i < lineas.length; i++) {
+                const linea = lineas[i].trim();
+                if (linea === '') continue;
+
+                const valores = linea.split(',');
+
+                const resistividad = parseFloat(valores[indiceResistividad]);
+                const densidad = parseFloat(valores[indiceDensidad]);
+
+                if (isNaN(resistividad) || isNaN(densidad)) continue;
+
+                // Calcular porosidad a partir de la densidad
+                const porosidad = calcularPorosidadDensidad(densidad);
+
+                datos.push({
                     porosidad: porosidad,
-                    resistencia: resistencia
-                };
-            }).filter(d => !isNaN(d.porosidad) && !isNaN(d.resistencia));
+                    resistividad: resistividad
+                });
+            }
+        }
+
+        function calcularPorosidadDensidad(densidadMedida) {
+            // Parámetros para arcilla y fluido agua
+            const densidadMatriz = 2.65; // g/cm³ (típica para arenas)
+            const densidadFluido = 1.0; // g/cm³ (agua)
+
+            const porosidad = (densidadMatriz - densidadMedida) / (densidadMatriz - densidadFluido);
+
+            return porosidad;
         }
 
         function actualizarGrafico() {
@@ -71,9 +148,11 @@
             }
 
             const rw = parseFloat(document.getElementById('rw').value) || 0.1;
+            const m = parseFloat(document.getElementById('m').value) || 2;
+            const n = parseFloat(document.getElementById('n').value) || 2;
 
             const x = datos.map(d => d.porosidad);
-            const y = datos.map(d => d.resistencia);
+            const y = datos.map(d => d.resistividad);
 
             const traceDatos = {
                 x: x,
@@ -84,15 +163,11 @@
                 marker: { size: 8, color: 'blue' }
             };
 
-            // Ejemplo de línea de tendencia usando Rw
-            const m = 2; // Cementación
-            const n = 2; // Saturación
-            const a = 1; // Factor litológico
-
+            // Generar línea de tendencia usando Rw, m, y n
             const xLinea = [];
             const yLinea = [];
             for (let phi = 0.01; phi <= 0.5; phi += 0.01) {
-                const rt = (a * rw) / (Math.pow(phi, m));
+                const rt = (rw / (phi ** m));
                 xLinea.push(phi);
                 yLinea.push(rt);
             }
@@ -102,7 +177,7 @@
                 y: yLinea,
                 mode: 'lines',
                 type: 'scatter',
-                name: `Rw = ${rw}`,
+                name: `Rw = ${rw}, m = ${m}, n = ${n}`,
                 line: { color: 'red' }
             };
 
@@ -113,7 +188,7 @@
                     autorange: true
                 },
                 yaxis: {
-                    title: 'Resistencia (Rt)',
+                    title: 'Resistividad (Rt)',
                     type: 'log',
                     autorange: true
                 },
