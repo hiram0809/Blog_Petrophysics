@@ -1,0 +1,24 @@
+<div id="grafico-pickett"></div>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+var trace = {
+  x: [/* Porosidad */],
+  y: [/* Resistencia */],
+  mode: 'markers',
+  type: 'scatter'
+};
+
+var layout = {
+  xaxis: { title: 'Porosidad (φ)' },
+  yaxis: { title: 'Resistencia (Rt)', type: 'log' },
+  title: 'Gráfico de Pickett'
+};
+
+Plotly.newPlot('grafico-pickett', [trace], layout);
+
+<label>Valor de Rw:</label>
+<input id="rw" name="rw" type="number" value="0.1" />
+document.getElementById('rw').addEventListener('input', function() {
+  var rw = parseFloat(this.value);
+  // Recalcula los datos o actualiza las líneas de tendencia en el gráfico
+  Plotly.react('grafico-pickett', updatedData, layout);
+});
