@@ -158,10 +158,13 @@
                 // Calcular porosidad a partir de la densidad
                 const porosidad = calcularPorosidadDensidad(densidad);
 
-                datos.push({
-                    porosidad: porosidad,
-                    resistividad: resistividad
-                });
+                // Filtrar valores anómalos de porosidad
+                if (porosidad >= 0 && porosidad <= 1) {
+                    datos.push({
+                        porosidad: porosidad,
+                        resistividad: resistividad
+                    });
+                }
             }
         }
 
