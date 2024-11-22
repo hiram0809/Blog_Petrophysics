@@ -179,6 +179,18 @@
             const x = datos.map(d => d.porosidad);
             const y = datos.map(d => d.resistividad);
 
+            // Determinar los límites de los ejes basados en los datos
+            const xMinData = Math.min(...x);
+            const xMaxData = Math.max(...x);
+            const yMinData = Math.min(...y);
+            const yMaxData = Math.max(...y);
+
+            // Definir los límites de los ejes con un margen
+            const xMin = Math.pow(10, Math.floor(Math.log10(xMinData)) - 1);
+            const xMax = Math.pow(10, Math.ceil(Math.log10(xMaxData)) + 1);
+            const yMin = Math.pow(10, Math.floor(Math.log10(yMinData)) - 1);
+            const yMax = Math.pow(10, Math.ceil(Math.log10(yMaxData)) + 1);
+
             const traceDatos = {
                 x: x,
                 y: y,
@@ -191,7 +203,14 @@
             // Generar línea de tendencia usando Rw, m, y n
             const xLinea = [];
             const yLinea = [];
-            for (let phi = 0.01; phi <= 0.5; phi += 0.005) {
+
+            // Generar phi desde xMin hasta xMax en escala logarítmica
+            const numPuntos = 100;
+            const phiInicio = xMin;
+            const phiFin = xMax;
+
+            for (let i = 0; i <= numPuntos; i++) {
+                const phi = phiInicio * Math.pow(phiFin / phiInicio, i / numPuntos);
                 const rt = rw / Math.pow(phi, m);
                 xLinea.push(phi);
                 yLinea.push(rt);
@@ -210,12 +229,14 @@
                 xaxis: {
                     title: 'Porosidad Neutrón (φn)',
                     type: 'log',
-                    autorange: true
+                    autorange: false,
+                    range: [Math.log10(xMin), Math.log10(xMax)]
                 },
                 yaxis: {
                     title: 'Resistividad (Rt)',
                     type: 'log',
-                    autorange: true
+                    autorange: false,
+                    range: [Math.log10(yMin), Math.log10(yMax)]
                 },
                 title: 'Gráfico de Pickett',
                 showlegend: true
