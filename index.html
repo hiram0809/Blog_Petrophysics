@@ -156,7 +156,7 @@
                 if (isNaN(resistividad) || isNaN(porosidadNeutron)) continue;
 
                 // Filtrar valores de porosidad neutrón entre 0.01 y 0.5
-                if (porosidadNeutron >= 0.01 && porosidadNeutron <= 0.5) {
+                if (porosidadNeutron >= 0.01 && porosidadNeutron <= 1) {
                     datos.push({
                         porosidad: porosidadNeutron,
                         resistividad: resistividad
@@ -194,7 +194,7 @@
 
             // Definir límites fijos para phi y Rt
             const phiInicio = 0.01;
-            const phiFin = 0.5;
+            const phiFin = 0.8;
             const rtMin = 0.1;
             const rtMax = 10000;
 
@@ -226,8 +226,8 @@
                     autorange: false,
                     range: [Math.log10(phiInicio), Math.log10(phiFin)],
                     dtick: 0.1,
-                    tickvals: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5],
-                    ticktext: ['0.01', '0.02', '0.05', '0.1', '0.2', '0.5']
+                    tickvals: [0.01, 0.02, 0.05, 0.1, 0.2, 0.7],
+                    ticktext: ['0.01', '0.02', '0.05', '0.1', '0.2', '0.7']
                 },
                 yaxis: {
                     title: 'Resistividad (Rt)',
