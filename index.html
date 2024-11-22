@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gráfico de Pickett Interactivo</title>
+    <!-- Incluir la librería de Plotly -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #grafico {
+            width: 100%;
+            height: 600px;
+        }
+        #controles {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Gráfico de Pickett Interactivo</h1>
+
+    <div id="controles">
+        <label for="archivo">Cargar archivo de datos (CSV): </label>
+        <input type="file" id="archivo" accept=".csv"><br><br>
+
+        <label for="rw">Valor de Rw: </label>
+        <input type="number" id="rw" name="rw" step="any" value="0.1"><br><br>
+    </div>
+
+    <div id="grafico"></div>
+
+    <script>
+        let datos = [];
+
+        document.getElementById('archivo').addEventListener('change', function(e) {
+            const archivo = e.target.files[0];
+            if (!archivo) {
+                return;
+            }
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                const contenido = e.target.result;
+                procesarDatos(contenido);
+                actualizarGrafico();
+            };
+            lector.readAsText(archivo);
+        });
+
+        document.getElementById('rw').addEventListener('input', function() {
+            actualizarGrafico();
+        });
+
+        function procesarDatos(csv) {
+            const lineas = csv.split('\n');
+            datos = lineas.map(linea => {
+                const [porosidad, resistencia] = linea.trim().split(',').map(Number);
+                return {
+                    porosidad: porosidad,
+                    resistencia: resistencia
+                };
+            }).filter(d => !isNaN(d.porosidad) && !isNaN(d.resistencia));
+        }
+
+        function actualizarGrafico() {
+            if (datos.length === 0) {
+                return;
+            }
+
+            const rw = parseFloat(document.getElementById('rw').value) || 0.1;
+
+            const x = datos.map(d => d.porosidad);
+            const y = datos.map(d => d.resistencia);
+
+            const traceDatos = {
+                x: x,
+                y: y,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Datos',
+                marker: { size: 8, color: 'blue' }
+            };
+
+            // Ejemplo de línea de tendencia usando Rw
+            const m = 2; // Cementación
+            const n = 2; // Saturación
+            const a = 1; // Factor litológico
+
+            const xLinea = [];
+            const yLinea = [];
+            for (let phi = 0.01; phi <= 0.5; phi += 0.01) {
+                const rt = (a * rw) / (Math.pow(phi, m));
+                xLinea.push(phi);
+                yLinea.push(rt);
+            }
+
+            const traceLinea = {
+                x: xLinea,
+                y: yLinea,
+                mode: 'lines',
+                type: 'scatter',
+                name: `Rw = ${rw}`,
+                line: { color: 'red' }
+            };
+
+            const layout = {
+                xaxis: {
+                    title: 'Porosidad (φ)',
+                    type: 'log',
+                    autorange: true
+                },
+                yaxis: {
+                    title: 'Resistencia (Rt)',
+                    type: 'log',
+                    autorange: true
+                },
+                title: 'Gráfico de Pickett',
+                showlegend: true
+            };
+
+            Plotly.newPlot('grafico', [traceDatos, traceLinea], layout);
+        }
+    </script>
+
+</body>
+</html>
