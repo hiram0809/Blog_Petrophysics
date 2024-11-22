@@ -21,11 +21,17 @@
             margin-bottom: 10px;
         }
         label {
-            width: 150px;
+            width: 200px;
             display: inline-block;
         }
-        input[type="number"] {
-            width: 100px;
+        input[type="number"], input[type="range"] {
+            width: 300px;
+        }
+        .value-display {
+            display: inline-block;
+            width: 80px;
+            text-align: left;
+            margin-left: 10px;
         }
     </style>
 </head>
@@ -41,17 +47,20 @@
 
         <div class="input-group">
             <label for="rw">Valor de Rw: </label>
-            <input type="number" id="rw" name="rw" step="any" value="0.1">
+            <input type="range" id="rw" name="rw" min="-3" max="1" step="0.01" value="-1">
+            <span id="rw-display" class="value-display">1.0e-1</span>
         </div>
 
         <div class="input-group">
             <label for="m">Valor de m (Cementación): </label>
-            <input type="number" id="m" name="m" step="any" value="2">
+            <input type="range" id="m" name="m" min="1.0" max="3.0" step="0.01" value="2.0">
+            <span id="m-display" class="value-display">2.0</span>
         </div>
 
         <div class="input-group">
             <label for="n">Valor de n (Saturación): </label>
-            <input type="number" id="n" name="n" step="any" value="2">
+            <input type="range" id="n" name="n" min="1.0" max="3.0" step="0.01" value="2.0">
+            <span id="n-display" class="value-display">2.0</span>
         </div>
     </div>
 
@@ -60,7 +69,16 @@
     <script>
         let datos = [];
 
-        // Event listeners
+        // Inicializar elementos de entrada y visualización
+        const rwInput = document.getElementById('rw');
+        const mInput = document.getElementById('m');
+        const nInput = document.getElementById('n');
+
+        const rwDisplayElement = document.getElementById('rw-display');
+        const mDisplayElement = document.getElementById('m-display');
+        const nDisplayElement = document.getElementById('n-display');
+
+        // Event listeners para cargar archivo y actualizar controles
         document.getElementById('archivo').addEventListener('change', function(e) {
             const archivo = e.target.files[0];
             if (!archivo) {
@@ -75,12 +93,27 @@
             lector.readAsText(archivo);
         });
 
-        const inputs = ['rw', 'm', 'n'];
-        inputs.forEach(id => {
-            document.getElementById(id).addEventListener('input', function() {
-                actualizarGrafico();
-            });
+        rwInput.addEventListener('input', function() {
+            const rwExponent = parseFloat(rwInput.value);
+            const rw = Math.pow(10, rwExponent);
+            rwDisplayElement.textContent = rw.toExponential(2);
+            actualizarGrafico();
         });
+
+        mInput.addEventListener('input', function() {
+            mDisplayElement.textContent = parseFloat(mInput.value).toFixed(2);
+            actualizarGrafico();
+        });
+
+        nInput.addEventListener('input', function() {
+            nDisplayElement.textContent = parseFloat(nInput.value).toFixed(2);
+            actualizarGrafico();
+        });
+
+        // Inicializar valores de visualización
+        rwDisplayElement.textContent = Math.pow(10, parseFloat(rwInput.value)).toExponential(2);
+        mDisplayElement.textContent = parseFloat(mInput.value).toFixed(2);
+        nDisplayElement.textContent = parseFloat(nInput.value).toFixed(2);
 
         function procesarDatos(csv) {
             const lineas = csv.split('\n');
@@ -134,7 +167,7 @@
 
         function calcularPorosidadDensidad(densidadMedida) {
             // Parámetros para arcilla y fluido agua
-            const densidadMatriz = 2.65; // g/cm³ (típica para arenas)
+            const densidadMatriz = 2.65; // g/cm³ (típica para arcilla)
             const densidadFluido = 1.0; // g/cm³ (agua)
 
             const porosidad = (densidadMatriz - densidadMedida) / (densidadMatriz - densidadFluido);
@@ -147,9 +180,11 @@
                 return;
             }
 
-            const rw = parseFloat(document.getElementById('rw').value) || 0.1;
-            const m = parseFloat(document.getElementById('m').value) || 2;
-            const n = parseFloat(document.getElementById('n').value) || 2;
+            const rwExponent = parseFloat(rwInput.value);
+            const rw = Math.pow(10, rwExponent);
+
+            const m = parseFloat(mInput.value);
+            const n = parseFloat(nInput.value);
 
             const x = datos.map(d => d.porosidad);
             const y = datos.map(d => d.resistividad);
@@ -166,8 +201,8 @@
             // Generar línea de tendencia usando Rw, m, y n
             const xLinea = [];
             const yLinea = [];
-            for (let phi = 0.01; phi <= 0.5; phi += 0.01) {
-                const rt = (rw / (phi ** m));
+            for (let phi = 0.01; phi <= 0.5; phi += 0.005) {
+                const rt = rw / Math.pow(phi, m);
                 xLinea.push(phi);
                 yLinea.push(rt);
             }
@@ -177,7 +212,7 @@
                 y: yLinea,
                 mode: 'lines',
                 type: 'scatter',
-                name: `Rw = ${rw}, m = ${m}, n = ${n}`,
+                name: `Rw = ${rw.toExponential(2)}, m = ${m.toFixed(2)}, n = ${n.toFixed(2)}`,
                 line: { color: 'red' }
             };
 
